@@ -11,6 +11,11 @@ fn main() {
     println!(
         "Part1: {}",
         part1(BufReader::new(File::open("files/01.txt").unwrap())).unwrap()
+    );
+
+    println!(
+        "Part2: {}",
+        part2(BufReader::new(File::open("files/01.txt").unwrap())).unwrap()
     )
 }
 
@@ -24,6 +29,15 @@ fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn Error>> {
             dial.point == 0
         })
         .count())
+}
+
+fn part2<R: BufRead>(reader: R) -> Result<usize, Box<dyn Error>> {
+    let mut dial = Dial::default();
+
+    Ok(read_input(reader)?
+        .into_iter()
+        .map(|rotation| dial.rotate_part2(rotation))
+        .sum())
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -88,6 +102,42 @@ impl Dial {
             }
         }
     }
+
+    /// Returns number of types dial pointed at 0, regardless of whether it happens
+    /// during a rotation or at the end of one.
+    pub fn rotate_part2(&mut self, rotation: Rotation) -> usize {
+        let value = rotation.value % (MAX + 1);
+
+        let full_spins = (rotation.value / (MAX + 1)) as usize;
+
+        let pointed_at_zero = match rotation.direction {
+            Direction::L => {
+                if self.point >= value {
+                    self.point -= value;
+                    self.point == 0
+                } else {
+                    let was_zero = self.point == 0;
+                    let remainder = value - self.point;
+                    self.point = MAX - remainder + 1;
+                    !was_zero
+                }
+            }
+            Direction::R => {
+                let sum = self.point + value;
+
+                if sum <= MAX {
+                    self.point = sum;
+                    self.point == 0
+                } else {
+                    let was_zero = self.point == 0;
+                    self.point = sum - MAX - 1;
+                    !was_zero
+                }
+            }
+        };
+
+        full_spins + (if pointed_at_zero { 1 } else { 0 })
+    }
 }
 
 impl Default for Dial {
@@ -105,7 +155,7 @@ fn read_input<R: BufRead>(reader: R) -> Result<Vec<Rotation>, Box<dyn Error>> {
 mod tests {
     use std::io::BufReader;
 
-    use crate::{Dial, Direction, Rotation, part1, read_input};
+    use crate::{Dial, Direction, Rotation, part1, part2, read_input};
 
     const TEST: &str = r#"L68
 L30
@@ -180,5 +230,10 @@ L82"#;
     #[test]
     fn test_part1() {
         assert_eq!(3, part1(BufReader::new(TEST.as_bytes())).unwrap());
+    }
+
+    #[test]
+    fn test_part2() {
+        assert_eq!(6, part2(TEST.as_bytes()).unwrap());
     }
 }
