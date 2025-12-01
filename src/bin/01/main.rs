@@ -103,7 +103,7 @@ impl Dial {
         }
     }
 
-    /// Returns number of types dial pointed at 0, regardless of whether it happens
+    /// Returns a number of times dial pointed at 0, regardless of whether it happens
     /// during a rotation or at the end of one.
     pub fn rotate_part2(&mut self, rotation: Rotation) -> usize {
         let value = rotation.value % (MAX + 1);
