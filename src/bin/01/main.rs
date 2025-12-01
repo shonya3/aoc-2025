@@ -10,21 +10,20 @@ const MAX: u16 = 99;
 fn main() {
     println!(
         "Part1: {}",
-        part1(BufReader::new(File::open("files/01.txt").unwrap()))
+        part1(BufReader::new(File::open("files/01.txt").unwrap())).unwrap()
     )
 }
 
-fn part1<R: BufRead>(reader: R) -> usize {
+fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn Error>> {
     let mut dial = Dial::default();
 
-    read_input(reader)
-        .unwrap()
+    Ok(read_input(reader)?
         .into_iter()
         .filter(|rotation| {
             dial.rotate(*rotation);
             dial.point == 0
         })
-        .count()
+        .count())
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -180,6 +179,6 @@ L82"#;
 
     #[test]
     fn test_part1() {
-        assert_eq!(3, part1(BufReader::new(TEST.as_bytes())));
+        assert_eq!(3, part1(BufReader::new(TEST.as_bytes())).unwrap());
     }
 }
