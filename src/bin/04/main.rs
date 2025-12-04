@@ -6,6 +6,31 @@ fn main() {
     let s = std::fs::read_to_string("files/04.txt").unwrap();
 
     println!("Part 1: {}", part1(&s));
+    println!("Part 2: {}", part2(&s));
+}
+
+fn part1(s: &str) -> usize {
+    s.parse::<Grid>().unwrap().get_removable_positions().len()
+}
+
+fn part2(s: &str) -> usize {
+    let mut grid: Grid = s.parse().unwrap();
+
+    let mut total_removed = 0;
+
+    loop {
+        let positions = grid.get_removable_positions();
+
+        if positions.is_empty() {
+            return total_removed;
+        }
+
+        total_removed += positions.len();
+
+        for pos in positions {
+            grid.grid[pos.y][pos.x] = Field::Empty;
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -13,22 +38,24 @@ struct Grid {
     grid: Vec<Vec<Field>>,
 }
 
-fn part1(s: &str) -> usize {
-    let grid: Grid = s.parse().unwrap();
-
-    grid.clone()
-        .grid
-        .into_iter()
-        .enumerate()
-        .flat_map(|(y, row)| row.into_iter().enumerate().map(move |(x, f)| (f, p(x, y))))
-        .filter(|(f, _)| f == &Field::Paper)
-        .filter(|(_, pos)| grid.get_adjacent_paper_n(pos.clone()) < 4)
-        .count()
-}
-
 impl Grid {
     fn get(&self, pos: Position) -> Option<Field> {
         self.grid.get(pos.y).and_then(|row| row.get(pos.x)).copied()
+    }
+
+    /// Removable: number of adjacent paper fields < 4
+    fn get_removable_positions(&self) -> Vec<Position> {
+        self.clone()
+            .grid
+            .into_iter()
+            .enumerate()
+            .flat_map(|(y, row)| row.into_iter().enumerate().map(move |(x, f)| (f, p(x, y))))
+            .filter(|(f, _)| f == &Field::Paper)
+            .filter_map(|(_, pos)| match self.get_adjacent_paper_n(pos.clone()) {
+                0..=3 => Some(pos),
+                _ => None,
+            })
+            .collect()
     }
 
     fn get_adjacent_paper_n(&self, pos: Position) -> usize {
@@ -122,7 +149,7 @@ impl FromStr for Field {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Field, Grid, p, part1};
+    use crate::{Field, Grid, p, part1, part2};
 
     const TEST: &str = r#"..@@.@@@@.
 @@@.@.@.@@
@@ -145,6 +172,11 @@ mod tests {
     #[test]
     fn test_part1() {
         assert_eq!(13, part1(TEST))
+    }
+
+    #[test]
+    fn test_part2() {
+        assert_eq!(43, part2(TEST))
     }
 
     #[test]
