@@ -14,87 +14,111 @@ fn main() {
     );
 }
 
-#[allow(clippy::needless_range_loop)]
 fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn Error>> {
-    let Input { nums, ops } = parse(reader)?;
+    let sum = Input::parse(reader)?
+        .into_operations()
+        .into_iter()
+        .map(|op| op.calc())
+        .sum();
 
-    let operands_n = nums.len();
-    let problems_n = nums[0].len();
+    Ok(sum)
+}
 
-    let mut sum = 0;
+struct Operation {
+    operands: Vec<usize>,
+    sign: Sign,
+}
 
-    for x in 0..problems_n {
-        let mut vec: Vec<usize> = vec![];
-        for y in 0..operands_n {
-            vec.push(nums[y][x] as usize);
-        }
-
-        sum += match ops[x] {
-            Op::Add => vec.iter().sum(),
-            Op::Mul => {
+impl Operation {
+    fn calc(&self) -> usize {
+        match self.sign {
+            Sign::Add => self.operands.iter().sum(),
+            Sign::Mul => {
                 let mut product = 1;
-                for n in vec {
+                for n in &self.operands {
                     product *= n;
                 }
 
                 product
             }
-        };
+        }
     }
-
-    Ok(sum)
 }
 
 #[derive(Debug, Clone)]
 struct Input {
     nums: Vec<Vec<u16>>,
-    ops: Vec<Op>,
+    signs: Vec<Sign>,
 }
 
-fn parse<R: BufRead>(reader: R) -> Result<Input, Box<dyn Error>> {
-    let mut nums: Vec<Vec<u16>> = Vec::new();
+impl Input {
+    #[allow(clippy::needless_range_loop)]
+    fn into_operations(self) -> Vec<Operation> {
+        let Input { nums, signs } = self;
 
-    for line in reader.lines() {
-        let line = line?;
+        let operands_n = nums.len();
+        let problems_n = nums[0].len();
 
-        let mut nums_line: Vec<u16> = Vec::new();
+        let mut operations: Vec<Operation> = Vec::new();
 
-        for s in line.split_whitespace() {
-            match s.parse::<u16>() {
-                Ok(n) => nums_line.push(n),
-                Err(_) => {
-                    let ops = line
-                        .split_whitespace()
-                        .map(|s| s.parse::<Op>())
-                        .collect::<Result<Vec<Op>, _>>()?;
-
-                    return Ok(Input { nums, ops });
-                }
+        for x in 0..problems_n {
+            let mut operands: Vec<usize> = vec![];
+            for y in 0..operands_n {
+                operands.push(nums[y][x] as usize);
             }
+
+            operations.push(Operation {
+                operands,
+                sign: signs[x],
+            });
         }
 
-        nums.push(nums_line);
+        operations
     }
 
-    Err("No line of operations symbols found".into())
+    fn parse<R: BufRead>(reader: R) -> Result<Input, Box<dyn Error>> {
+        let mut nums: Vec<Vec<u16>> = Vec::new();
+
+        for line in reader.lines() {
+            let line = line?;
+
+            let mut nums_line: Vec<u16> = Vec::new();
+
+            for s in line.split_whitespace() {
+                match s.parse::<u16>() {
+                    Ok(n) => nums_line.push(n),
+                    Err(_) => {
+                        let signs = line
+                            .split_whitespace()
+                            .map(|s| s.parse::<Sign>())
+                            .collect::<Result<Vec<Sign>, _>>()?;
+
+                        return Ok(Input { nums, signs });
+                    }
+                }
+            }
+
+            nums.push(nums_line);
+        }
+
+        Err("No line of operations signs found".into())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Op {
+enum Sign {
     Add,
     Mul,
 }
 
-impl FromStr for Op {
+impl FromStr for Sign {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "+" => Ok(Op::Add),
-            "*" => Ok(Op::Mul),
-            _ => {
-                Err(format!("Unexpected symbol of operaiton. Expected '+' or '*'. Got {s}").into())
-            }
+            "+" => Ok(Sign::Add),
+            "*" => Ok(Sign::Mul),
+            _ => Err(format!("Unexpected sign of operaiton. Expected '+' or '*'. Got {s}").into()),
         }
     }
 }
