@@ -12,8 +12,79 @@ fn main() {
         "Part 1: {}",
         part1(BufReader::new(File::open("files/06.txt").unwrap())).unwrap()
     );
+
+    let s = std::fs::read_to_string("files/06.txt").unwrap();
+    println!("Part 2: {}", part2(&s));
 }
 
+#[allow(clippy::needless_range_loop)]
+fn part2(input: &str) -> usize {
+    let lines_n = input.lines().count();
+
+    let mut max_col: usize = 0;
+
+    let grid: Vec<Vec<char>> = input
+        .lines()
+        .map(|line| {
+            let chars = line.chars().collect::<Vec<char>>();
+            let len = chars.len();
+            if len > max_col {
+                max_col = len;
+            };
+
+            chars
+        })
+        .collect();
+
+    let sign_row_idx = lines_n - 1;
+
+    let mut sign: Option<Sign> = None;
+    let mut operands: Vec<usize> = vec![];
+
+    let mut total: usize = 0;
+
+    for col in 0..max_col {
+        let s = sign.unwrap_or_else(|| {
+            let sign_str = grid[sign_row_idx][col].to_string();
+            let s = sign_str.parse().unwrap();
+            sign = Some(s);
+            s
+        });
+
+        if sign.is_none() {
+            let sign_str = grid[sign_row_idx][col].to_string();
+            sign = Some(sign_str.parse().unwrap());
+        }
+
+        let mut value_s = String::new();
+
+        for row in 0..lines_n - 1 {
+            let ch = grid[row][col];
+            if ch.to_string().parse::<u8>().is_ok() {
+                value_s.push(ch);
+            }
+        }
+
+        // if no values in entire column, operands are ready
+        if value_s.is_empty() {
+            total += Operation { operands, sign: s }.calc();
+
+            operands = vec![];
+            sign = None;
+        } else {
+            let value: usize = value_s.parse().unwrap();
+            operands.push(value);
+        }
+    }
+
+    if let Some(sign) = sign {
+        total += Operation { operands, sign }.calc();
+    }
+
+    total
+}
+
+#[allow(unused)]
 fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn Error>> {
     let sum = Input::parse(reader)?
         .into_operations()
@@ -24,6 +95,7 @@ fn part1<R: BufRead>(reader: R) -> Result<usize, Box<dyn Error>> {
     Ok(sum)
 }
 
+#[derive(Debug, Clone, Default)]
 struct Operation {
     operands: Vec<usize>,
     sign: Sign,
@@ -105,8 +177,9 @@ impl Input {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 enum Sign {
+    #[default]
     Add,
     Mul,
 }
