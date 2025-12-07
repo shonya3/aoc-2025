@@ -1,3 +1,4 @@
+use crate::part2::part2;
 use std::{error::Error, ops::RangeInclusive, str::FromStr};
 
 fn main() {
@@ -6,6 +7,7 @@ fn main() {
     let s = std::fs::read_to_string("files/05.txt").unwrap();
 
     println!("Part 1: {}", part1(&s).unwrap());
+    println!("Part 2: {}", part2(&s).unwrap());
 }
 
 #[allow(unused)]
@@ -130,5 +132,63 @@ mod tests {
         assert!(db.is_fresh(11));
         assert!(db.is_fresh(17));
         assert!(!db.is_fresh(32));
+    }
+}
+
+mod part2 {
+    use crate::Database;
+    use std::{cmp, error::Error};
+
+    pub fn part2(s: &str) -> Result<usize, Box<dyn Error>> {
+        let database: Database = s.parse()?;
+
+        let ranges: Vec<RangeInc> = database
+            .fresh
+            .into_iter()
+            .map(|range| RangeInc {
+                start: *range.start(),
+                end: *range.end(),
+            })
+            .collect();
+
+        Ok(merge_overlapping_ranges(ranges)
+            .iter()
+            .map(|r| r.count())
+            .sum())
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct RangeInc {
+        start: usize,
+        end: usize,
+    }
+
+    impl RangeInc {
+        fn count(&self) -> usize {
+            self.end - self.start + 1
+        }
+    }
+
+    fn merge_overlapping_ranges(mut ranges: Vec<RangeInc>) -> Vec<RangeInc> {
+        if ranges.is_empty() {
+            return vec![];
+        }
+
+        ranges.sort_by_key(|r| r.start);
+
+        let mut iter = ranges.into_iter();
+        let mut merged = vec![iter.next().unwrap()];
+
+        for next_range in iter {
+            if let Some(last_merged) = merged.last_mut() {
+                if next_range.start <= last_merged.end {
+                    last_merged.end = cmp::max(last_merged.end, next_range.end);
+                } else {
+                    merged.push(next_range);
+                }
+            }
+        }
+
+        merged
     }
 }
